@@ -21,9 +21,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft = details.max_participants - details.participants.length;
 
         // Create participants list
+
+        // Agregar ícono de eliminar a cada participante
         const participantsList = details.participants
-          .map((participant) => `<li>${participant}</li>`)
+          .map((participant) =>
+            `<li class="participant-item">${participant} <span class="delete-participant" title="Remove" data-activity="${name}" data-email="${participant}">&#128465;</span></li>`
+          )
           .join("");
+
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
@@ -33,6 +38,36 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="participants-title">Participants:</div>
           <ul class="participants-list">${participantsList || "<li>No participants yet</li>"}</ul>
         `;
+
+        // Delegación de eventos para eliminar participante
+        activityCard.addEventListener("click", async (e) => {
+          if (e.target.classList.contains("delete-participant")) {
+            const email = e.target.getAttribute("data-email");
+            const activity = e.target.getAttribute("data-activity");
+            if (confirm(`Remove ${email} from ${activity}?`)) {
+              try {
+                const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+                  method: "DELETE",
+                });
+                const result = await response.json();
+                if (response.ok) {
+                  fetchActivities();
+                  messageDiv.textContent = result.message;
+                  messageDiv.className = "success";
+                } else {
+                  messageDiv.textContent = result.detail || "Error removing participant";
+                  messageDiv.className = "error";
+                }
+                messageDiv.classList.remove("hidden");
+                setTimeout(() => messageDiv.classList.add("hidden"), 5000);
+              } catch (err) {
+                messageDiv.textContent = "Failed to remove participant.";
+                messageDiv.className = "error";
+                messageDiv.classList.remove("hidden");
+              }
+            }
+          }
+        });
 
         activitiesList.appendChild(activityCard);
 
